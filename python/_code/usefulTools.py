@@ -13,8 +13,13 @@ import numpy as np
 from scipy import misc
 
 
-# Load a set of image files from a directory and specified by a regular expression
 def load_images(directory=".", regexp="^.*\.png$"):
+    """
+    Load a set of image files from a directory and specified by a regular expression
+    :param directory:
+    :param regexp:
+    :return:
+    """
     patt_re = re.compile(regexp)
     data = None
     dirlist = [f for f in os.listdir(directory) if patt_re.match(f)]
@@ -37,8 +42,10 @@ def load_images(directory=".", regexp="^.*\.png$"):
     return data
 
 
-# Load the CROHME dataset for isolated symbols. Directories "train", "validation" and "test" must exist
 def load_dataset(display_examples=False):
+    """
+    Load the CROHME dataset for isolated symbols. Directories "train", "validation" and "test" must exist*
+    """
     # data will store all images split in train/val/test  junk are ignored by default
     data = {i: None for i in ["train", "validation", "test"]}  # , "junk"]}  #similar to CROHME folder names
     data_gt = {i: None for i in data.keys()}
@@ -119,10 +126,13 @@ def load_dataset(display_examples=False):
         data["test"], data_gt["test"]
 
 
-# ################## Download and prepare the MNIST dataset ##################
-# This is just some way of getting the MNIST dataset from an online location
-# and loading it into numpy arrays. It doesn't involve Lasagne at all.
 def load_mnist_dataset():
+    """
+    # Download and prepare the MNIST dataset
+    This is just some way of getting the MNIST dataset from an online location and loading it into numpy arrays.
+    It doesn't involve Lasagne at all.
+    :return:
+    """
     # We first define a download function, supporting both Python 2 and 3.
     if sys.version_info[0] == 2:
         from urllib import urlretrieve
@@ -175,14 +185,23 @@ def load_mnist_dataset():
     return x_train, y_train, x_val, y_val, x_test, y_test
 
 
-# load the dasets and reshape it using sequences instead of 2D images 
 def load_dataset_sequence(size):
+    """
+    load the dasets and reshape it using sequences instead of 2D images
+    :param size:
+    :return:
+    """
     x_train, y_train, x_val, y_val, x_test, y_test = load_dataset()
     return x_train.reshape(-1, 1, size * size), y_train, x_val.reshape(-1,  1, size * size), y_val, x_test.reshape(-1,  1, size * size), y_test
 
 
-# load the dasets and project the pixel V or H to obtain sequences instead of 2D images 
 def load_dataset_sequence2(size, proj='V'):
+    """
+    load the data sets and project the pixel V or H to obtain sequences instead of 2D images
+    :param size:
+    :param proj:
+    :return:
+    """
     x_train, y_train, x_val, y_val, x_test, y_test = load_dataset()
     x_train = x_train.reshape(-1, size, size)
     x_val = x_val.reshape(-1, size, size)
@@ -201,20 +220,23 @@ def load_dataset_sequence2(size, proj='V'):
     print("X shape : {}".format(x_train.shape))
     return x_train, y_train, x_val, y_val, x_test, y_test
 
-# ############################# Batch iterator ###############################
-# This is just a simple helper function iterating over training data in
-# mini-batches of a particular size, optionally in random order. It assumes
-# data is available as numpy arrays. For big datasets, you could load numpy
-# arrays as memory-mapped files (np.load(..., mmap_mode='r')), or write your
-# own custom data iteration function. For small datasets, you can also copy
-# them to GPU at once for slightly improved performance. This would involve
-# several changes in the main program, though, and is not demonstrated here.
-# Notice that this function returns only mini-batches of size `batchsize`.
-# If the size of the data is not a multiple of `batchsize`, it will not
-# return the last (remaining) mini-batch.
-
 
 def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
+    """
+    # Batch iterator
+    This is just a simple helper function iterating over training data in mini-batches of a particular size,
+    optionally in random order. It assumes data is available as numpy arrays. For big datasets, you could load numpy
+    arrays as memory-mapped files (np.load(..., mmap_mode='r')), or write your own custom data iteration function.
+    For small datasets, you can also copy them to GPU at once for slightly improved performance. This would involve
+    several changes in the main program, though, and is not demonstrated here.
+    Notice that this function returns only mini-batches of size `batchsize`.
+    If the size of the data is not a multiple of `batchsize`, it will not return the last (remaining) mini-batch.
+    :param inputs:
+    :param targets:
+    :param batchsize:
+    :param shuffle:
+    :return:
+    """
     assert len(inputs) == len(targets)
     if shuffle:
         indices = np.arange(len(inputs))

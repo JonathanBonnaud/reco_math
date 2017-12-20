@@ -15,7 +15,13 @@ from gitchrome.crohmelib.bin.inkml import *
 
 
 def generate_right_seg(ink, seg_name, k=0):
-    """generate all one inkml file per symbol. Return the number of generated files."""
+    """
+    generate all one inkml file per symbol. Return the number of generated files.
+    :param ink:
+    :param seg_name:
+    :param k:
+    :return:
+    """
     # print "size seg ="+str(len(ink.segments.values()))
     output_g_tfile = open(seg_name + "_GT.txt", 'a')
     for seg in ink.segments.values():
@@ -38,9 +44,16 @@ def generate_right_seg(ink, seg_name, k=0):
 
 
 def generate_wrong_seg(ink, seg_name, nb=-1, nb_strk_max=4, k=0):
-    """generate nb wrong segmentation from the ink. If nb=-1, it will generate all wrong seg.
-    nb_strk_max is the maximum size of the generated hypothesis
-    Hypothesis are generated with continuous index in the ink file (no time jump)"""
+    """
+    generate nb wrong segmentation from the ink. If nb=-1, it will generate all wrong seg.
+    Hypothesis are generated with continuous index in the ink file (no time jump)
+    :param ink:
+    :param seg_name:
+    :param nb:
+    :param nb_strk_max: maximum size of the generated hypothesis
+    :param k:
+    :return:
+    """
     nbs = len(ink.strokes)
     strokes_list = range(nbs)
     all_hyp_matrix = []
