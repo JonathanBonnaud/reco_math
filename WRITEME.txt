@@ -1,0 +1,15 @@
+# écrire ce qu'on fait, ça peut être utilse pour faire un petit rapport et pour comprendre
+
+- création de segmenter qui génère un fichier .lg à partir d'un fichier .inkml
+Ca crée toutes les combinaisons possibles de traits consécutifs, ce sont des hypothèses de segements.
+Dans le but de créer des hypothèses de symboles.
+Ex : un symlbole peut correspondre à un trait 0 seulement, ou à un trait 0 + un trait 1.
+Ex concret :
+O, hyp1, *, 1.0, 0
+O, hyp2, *, 1.0, 1
+O, hyp3, *, 1.0, 2
+O, hyp4, *, 1.0, 0, 1
+O, hyp5, *, 1.0, 1, 2
+O, hyp6, *, 1.0, 0, 1, 2
+
+- on veut créer un classifieur de symbole
