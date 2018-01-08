@@ -15,7 +15,7 @@ import theano.tensor as tensor
 
 import lasagne
 
-import _code.usefulTools as Tools
+import python.code.usefulTools as Tools
 
 # Config imports
 mpl.use('Agg')  # allows plotting in image without X-server

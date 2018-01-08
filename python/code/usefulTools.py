@@ -44,7 +44,7 @@ def load_images(directory=".", regexp="^.*\.png$"):
 
 def load_dataset(display_examples=False):
     """
-    Load the CROHME dataset for isolated symbols. Directories "train", "validation" and "test" must exist*
+    Load the CROHME dataset for isolated symbols. Directories "train", "validation" and "test" must exist
     """
     # data will store all images split in train/val/test  junk are ignored by default
     data = {i: None for i in ["train", "validation", "test"]}  # , "junk"]}  #similar to CROHME folder names

@@ -1,5 +1,7 @@
 data/
 .idea/
 *__pycache__
-python/_code/*.gz
-python/_code/*.png
+python/code/*.gz
+python/code/*.png
+subject/
+main_MathProject.pdf

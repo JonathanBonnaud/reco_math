@@ -11,7 +11,7 @@
 import random
 import sys
 
-from gitchrome.crohmelib.bin.inkml import *
+from python.gitchrome.crohmelib.bin.inkml import *
 
 
 def generate_right_seg(ink, seg_name, k=0):
