@@ -17,7 +17,7 @@ def generate_seg(ink, nb_strk_max=4):
         # all_hyp_matrix.extend(itertools.combinations(strokes_list,itNbMaxOfStrkPerObj))
         # or add only seg without time jump :
         for i in strokes_list:
-            if i + itNbMaxOfStrkPerObj < nb_strokes:
+            if i + itNbMaxOfStrkPerObj <= nb_strokes:
                 r = range(i, i + itNbMaxOfStrkPerObj)
                 # get real id of the strokes (strings)
                 seg = []
@@ -29,7 +29,7 @@ def generate_seg(ink, nb_strk_max=4):
     # écrire dans fichier LG qui a le même nom que le fichier .ikml
     file_path = '/'.join(ink.fileName.split('/')[:-1])
     filename = ink.fileName.split('/')[-1].split('.')[0]
-    with open(file_path + '/' + filename + '.LG', 'w') as file:
+    with open(file_path + '/' + filename + '.lg', 'w') as file:
         hyp_id = 0
         for hypo in all_hyp_matrix:
             hyp_id += 1
@@ -62,4 +62,4 @@ def main():
         except ET.ParseError:
             print("Inkml Parse error " + fname.strip())
 
-    print(str(nb_hypo) + " hypothesis extracted.")
+        print(str(nb_hypo) + " hypothesis extracted.")
