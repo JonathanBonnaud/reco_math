@@ -249,11 +249,12 @@ if __name__ == '__main__':
         Example
     python3 convertInkmlToImg.py ../../../DB_CRHOME/task2-validation-isolatedTest2013b 28 2
     '''
-    if len(sys.argv) < 3:
-        print('\n + Usage:', sys.argv[0], ' (file|folder) dim padding')
+    if len(sys.argv) < 5:
+        print('\n + Usage:', sys.argv[0], ' (file|folder) dim padding outputfolder')
         print('\t+ {:<20} - required str'.format("(file|folder)"))
         print('\t+ {:<20} - optional int (def = 28)'.format("dim"))
         print('\t+ {:<20} - optional int (def =  0)'.format("padding"))
+        print('\t+ {:<20} - required str'.format("output folder"))
         exit()
     else:
         if os.path.isfile(sys.argv[1]):
@@ -267,7 +268,7 @@ if __name__ == '__main__':
 
         folder_name = sys.argv[1].split(os.sep)[-2]
 
-        save_path = "data_png_" + folder_name
+        save_path = sys.argv[4]
         if not os.path.isdir(save_path):
             os.mkdir(save_path)
 
