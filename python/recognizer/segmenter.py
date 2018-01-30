@@ -27,9 +27,11 @@ def generate_seg(ink, nb_strk_max=4):
     print(all_hyp_matrix)
 
     # écrire dans fichier LG qui a le même nom que le fichier .ikml
-    file_path = '/'.join(ink.fileName.split('/')[:-1])
+    output_folder = "LGs/segments_hypo"
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
     filename = ink.fileName.split('/')[-1].split('.')[0]
-    with open(file_path + '/' + filename + '.lg', 'w') as file:
+    with open(output_folder + '/' + filename + '.lg', 'w') as file:
         hyp_id = 0
         for hypo in all_hyp_matrix:
             hyp_id += 1
@@ -37,8 +39,8 @@ def generate_seg(ink, nb_strk_max=4):
     return len(all_hyp_matrix)
 
 
-def main():
-    if len(sys.argv) < 1:
+def main(args):
+    if len(args) < 1:
         print("Usage: [[python]] segmenter.py <file.inkml>")
         print("Usage: [[python]] segmenter.py <list.txt>")
         print("")
@@ -47,10 +49,10 @@ def main():
         sys.exit(0)
     nb_hypo = -1
     file_list = []
-    if ".inkml" in sys.argv[1]:
-        file_list.append(sys.argv[1])
+    if ".inkml" in args[0]:
+        file_list.append(args[0])
     else:
-        fl = open(sys.argv[1])
+        fl = open(args[0])
         file_list = fl.readlines()
         fl.close()
     for fname in file_list:

@@ -1,138 +1,176 @@
 #!/usr/bin/env python3
-
-"""
-
-"""
-from random import randint
-import matplotlib.pyplot as plt
-
-import sys
+import math
 import os
 import re
+import sys
+from random import randint
+
+import matplotlib.pyplot as plt
 import numpy as np
 from scipy import misc
 
 
-def load_images(directory=".", regexp="^.*\.png$"):
-    """
-    Load a set of image files from a directory and specified by a regular expression
-    :param directory:
-    :param regexp:
-    :return:
-    """
+# Load a set of image files from a directory and specified by a regular expression
+def load_images(directory='.', regexp='^.*\.png$'):
     patt_re = re.compile(regexp)
     data = None
     dirlist = [f for f in os.listdir(directory) if patt_re.match(f)]
     for idx, f in enumerate(dirlist):
-        print("\t\t\r  [{}] loading images {:>6}/{:}".format(f, idx+1, len(dirlist)), end="")
+        print('\t\t\r  [{}] loading images {:>6}/{:}'.format(f, idx + 1, len(dirlist)), end='')
         sys.stdout.flush()
         if type(data) != np.ndarray:  # for the first image
             # Need to do this at first, because we do not know the image before
-            img_tmp = misc.imread(directory+os.sep+f).astype(np.float)
+            img_tmp = misc.imread(directory + os.sep + f).astype(np.float)
             # prepare tensor according to image number and dimension
             data = np.ndarray([len(dirlist), 1, *img_tmp.shape], dtype=np.float16)
             data[idx, 0, :, :] = img_tmp
-        else:                              # add other images
-            data[idx, 0, :, :] = misc.imread(directory+os.sep+f)
+        else:  # add other images
+            data[idx, 0, :, :] = misc.imread(directory + os.sep + f)
 
     data /= 255.
     # np.savez(filename, data[type_], data_gt[type_])
-    print("")
-
     return data
 
 
-def load_dataset(display_examples=False):
-    """
-    Load the CROHME dataset for isolated symbols. Directories "train", "validation" and "test" must exist
-    """
-    # data will store all images split in train/val/test  junk are ignored by default
-    data = {i: None for i in ["train", "validation", "test"]}  # , "junk"]}  #similar to CROHME folder names
-    data_gt = {i: None for i in data.keys()}
-    #            data file (.nz), images
-    # foreach part you set path file/ path image folder/ path to GT file
-    search = {i: [False, False, False] for i in data.keys()}
+def search_paths(datasets, root):
+    # foreach corpus we search for [npz file, image folder, GT file]
+    # if no paths were given then we try to find the paths in '.'
+    search = {i: [None, None, None] for i in datasets}
 
-    listing = [type_ for type_ in os.listdir(".")]
-    for dataset in data.keys():
-        for el in listing:
-            if dataset in el.lower():
-                if dataset == "train" and "junk" in el.lower():
+    files = [file_name for file_name in os.listdir(root)]
+    for corpus in datasets:
+        for file_name in files:
+            if corpus in file_name.lower():
+                if corpus == 'train' and 'junk' in file_name.lower():
                     continue
-                if os.path.isfile(el):
-                    if el.split(".")[-1] == "npz":
-                        search[dataset][0] = el
-                    elif "_GT" in el:
-                        search[dataset][2] = el
-                elif os.path.isdir(el):
-                    search[dataset][1] = el
+                if os.path.isfile(file_name):
+                    if file_name.split('.')[-1] == 'npz':
+                        search[corpus][0] = file_name
+                    elif '_GT' in file_name:
+                        search[corpus][2] = file_name
+                elif os.path.isdir(file_name):
+                    search[corpus][1] = file_name
+    return search
 
-    patt_re = re.compile("\W*(\d*).png")
 
-    for type_, path in search.items():
-        print(" ", type_, ": ", path, sep="")
+def display_img(data, labels):
+    nb_img = len(data)
+    squared = math.ceil(math.sqrt(nb_img))
+    for ii in range(nb_img):
+        plt.subplot(squared, squared, ii + 1)
 
-        if path[0]:  # if npz file exists, we can load it
-            dt = np.load(path[0])
-            data[type_] = dt["arr_0"]
-            data_gt[type_] = dt["arr_1"]
+        plt.title(str(ii) + ' - \'' + labels[ii].decode() + '\'')
+        plt.imshow(data[ii])
+    plt.tight_layout()
+    plt.show()
+
+
+def load_dataset(paths=None, display_examples=False, load_junk=False):
+    """
+        Load CROHME's isolated symbols datasets
+        Loading a dataset will create a new file .npz that is binary and REALLY
+        accelerate the loading of the data
+        If load_junk is true then data['train'] will contain train symbols
+        and junk symbols at the end
+
+        paths is a dict : {corpus_name: [path_to_npz_file, path_to_img_dir, path_to_gt_file]}
+        You should pass this argument else the program will try to find itself the paths
+
+        This function assert that the the GT file and the img_files are in the same order
+        the first line of GT file concerns the img file with the lowest number
+        this can be dangerous /!\
+
+        Note: GT stand for Ground Truth
+    """
+    datasets = ['train', 'validation', 'test']
+    if load_junk:
+        datasets += ['junk']
+
+    # Deal with paths
+    if paths is None:
+        paths = search_paths(datasets, '.')
+
+    # Actually loading dataset
+    patt_re = re.compile('\W*(\d*).png')  # Images file name (isoX.png)
+    data = {i: None for i in datasets}
+    data_gt = {i: None for i in datasets}
+    for corpus in datasets:
+        path = paths[corpus]
+        # print('\t{}: {}'.format(corpus, path))
+        npz_file = path[0]
+        img_dir = path[1]
+        gt_file = path[2]
+
+        if npz_file is not None and os.path.isfile(npz_file):
+            # if npz file exists, we can load it
+            # the npz file is created with `np.savez`
+            dt = np.load(npz_file)
+            data[corpus] = dt['arr_0']
+            data_gt[corpus] = dt['arr_1']
             del dt
-        else:                 # else load images and GT
-            dirlist = [type_ for type_ in os.listdir(path[1]) if type_.split(".")[-1] == "png"]
-            filename = path[1].split('_')[-1]
+        else:
+            # else load images and GT
+            img_files = [file_name for file_name in os.listdir(img_dir) if file_name.split('.')[-1] == 'png']
+            number_img = len(img_files)
 
-            data_gt[type_] = np.ndarray(len(dirlist), dtype="|S12")
+            # Inititialize data_gt to receive ground truth data
+            data_gt[corpus] = np.ndarray(number_img, dtype='|S12')  # '|S12' stands for 12 char string
 
-            if type_ != "junk":
-                with open(path[2], "r") as f:
-                    gt_s = [gt.split(",")[1] for gt in f.read().split("\n") if len(gt) > 0]
-            else:
-                data_gt[type_][:] = "junk"
+            # If the corpus is junk then we don't need to get the GT as it is always 'junk'
+            if corpus != 'junk':
+                # Loading GT file
+                with open(gt_file, 'r') as f:
+                    gt_s = [gt.split(',')[1].strip() for gt in f.read().split('\n') if len(gt) > 0]
 
-            for idx, img in enumerate(dirlist):
+            log_every = max(int(number_img * 0.01), 1)
+            for idx, img in enumerate(img_files):
+                if idx % log_every == 0:
+                    # Do not log every file for performance purposes
+                    print('\t\t\r  [{}] loading images {:>6}/{:}'.format(img, idx + 1, number_img), end='')
+                    sys.stdout.flush()
+
                 img_idx = int(patt_re.search(img).group(1))
+                loaded_img = misc.imread(os.path.join(img_dir, img)).astype(np.float)
 
-                print("\t\t\r  [{}] loading images {:>6}/{:}".format(filename, idx+1, len(dirlist)), end="")
-                sys.stdout.flush()
-                if type(data[type_]) != np.ndarray:  # for the first image
-                    # Need to do this at first, because we do not know the image before
-                    img_tmp = misc.imread(path[1]+os.sep+img).astype(np.float)
-                    # prepare tensor according to image number and dimension
-                    data[type_] = np.ndarray([len(dirlist), 1, *img_tmp.shape], dtype=np.float16)
-                    data[type_][idx, 0, :, :] = img_tmp
-                else:                              # add other images
-                    data[type_][idx, 0, :, :] = misc.imread(path[1]+os.sep+img)
+                # Initialize data[corpus] with the dimensions of the images
+                if type(data[corpus]) != np.ndarray:  # for the first image
+                    data[corpus] = np.ndarray([number_img, 1, *loaded_img.shape], dtype=np.float16)
 
-                if type_ != "junk":
-                    data_gt[type_][idx] = gt_s[img_idx]
+                # Add image to data
+                data[corpus][idx, 0, :, :] = loaded_img
 
-            data[type_] /= 255.
-            np.savez(filename, data[type_], data_gt[type_])
-            print("")
+                # Add GT for the image
+                if corpus != 'junk':
+                    data_gt[corpus][idx] = gt_s[img_idx]
+                else:
+                    data_gt[corpus][idx] = 'junk'
+                print('\t\t\r  [{}] loading images {:>6}/{:}'.format(img, idx + 1, number_img), end='')
+            sys.stdout.flush()
+            print()  # Newline for logging purpose
+
+            # Every pixel is between 0 and 255, this contains the value from 0. to 1.
+            data[corpus] /= 255.
+            np.savez(img_dir + '.npz', data[corpus], data_gt[corpus])
 
         if display_examples:  # for debug or fun, show some images
-            for ii in range(9):
-                plt.subplot(3, 3, ii+1)
+            nb_img = 9
+            rand_indexes = [randint(0, data[corpus].shape[0]) for _ in range(nb_img)]
+            display_img([data[corpus][i, 0, :].astype(np.float32) for i in rand_indexes],
+                        [data_gt[corpus][i] for i in rand_indexes])
 
-                ii = randint(0, data[type_].shape[0])
+    if load_junk:
+        data['train'] = np.concatenate([data['train'], data['junk']])
+        data_gt['train'] = np.concatenate([data_gt['train'], data_gt['junk']])
 
-                plt.title(str(ii) + " - \"" + data_gt[type_][ii].decode() + "\"")
-                plt.imshow(data[type_][ii, :])
-            plt.tight_layout()
-            plt.show()
-
-    return data["train"], data_gt["train"], \
-        data["validation"], data_gt["validation"],\
-        data["test"], data_gt["test"]
+    return (data['train'], data_gt['train'],
+            data['validation'], data_gt['validation'],
+            data['test'], data_gt['test'])
 
 
-def load_mnist_dataset():
-    """
-    # Download and prepare the MNIST dataset
-    This is just some way of getting the MNIST dataset from an online location and loading it into numpy arrays.
-    It doesn't involve Lasagne at all.
-    :return:
-    """
+# ################## Download and prepare the MNIST dataset ##################
+# This is just some way of getting the MNIST dataset from an online location
+# and loading it into numpy arrays. It doesn't involve Lasagne at all.
+def load_MNISTdataset():
     # We first define a download function, supporting both Python 2 and 3.
     if sys.version_info[0] == 2:
         from urllib import urlretrieve
@@ -140,7 +178,7 @@ def load_mnist_dataset():
         from urllib.request import urlretrieve
 
     def download(filename, source='http://yann.lecun.com/exdb/mnist/'):
-        print("Downloading %s" % filename)
+        print('Downloading %s' % filename)
         urlretrieve(source + filename, filename)
 
     # We then define functions for loading MNIST images and labels.
@@ -171,72 +209,63 @@ def load_mnist_dataset():
         return data
 
     # We can now download and read the training and test set images and labels.
-    x_train = load_mnist_images('train-images-idx3-ubyte.gz')
-    y_train = load_mnist_labels('train-labels-idx1-ubyte.gz')
-    x_test = load_mnist_images('t10k-images-idx3-ubyte.gz')
-    y_test = load_mnist_labels('t10k-labels-idx1-ubyte.gz')
+    X_train = load_mnist_images('mnist/train-images-idx3-ubyte.gz')
+    y_train = load_mnist_labels('mnist/train-labels-idx1-ubyte.gz')
+    X_test = load_mnist_images('mnist/t10k-images-idx3-ubyte.gz')
+    y_test = load_mnist_labels('mnist/t10k-labels-idx1-ubyte.gz')
 
     # We reserve the last 10000 training examples for validation.
-    x_train, x_val = x_train[:-10000], x_train[-10000:]
+    X_train, X_val = X_train[:-10000], X_train[-10000:]
     y_train, y_val = y_train[:-10000], y_train[-10000:]
 
     # We just return all the arrays in order, as expected in main().
     # (It doesn't matter how we do this as long as we can read them again.)
-    return x_train, y_train, x_val, y_val, x_test, y_test
+    return X_train, y_train, X_val, y_val, X_test, y_test
 
 
-def load_dataset_sequence(size):
-    """
-    load the dasets and reshape it using sequences instead of 2D images
-    :param size:
-    :return:
-    """
-    x_train, y_train, x_val, y_val, x_test, y_test = load_dataset()
-    return x_train.reshape(-1, 1, size * size), y_train, x_val.reshape(-1,  1, size * size), y_val, x_test.reshape(-1,  1, size * size), y_test
+# load the dasets and reshape it using sequences instead of 2D images
+def load_datasetSequence(size):
+    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
+    X_train = X_train.reshape(-1, 1, size * size)
+    X_val = X_val.reshape(-1, 1, size * size)
+    X_test = X_test.reshape(-1, 1, size * size)
+    return X_train, y_train, X_val, y_val, X_test, y_test
 
 
-def load_dataset_sequence2(size, proj='V'):
-    """
-    load the data sets and project the pixel V or H to obtain sequences instead of 2D images
-    :param size:
-    :param proj:
-    :return:
-    """
-    x_train, y_train, x_val, y_val, x_test, y_test = load_dataset()
-    x_train = x_train.reshape(-1, size, size)
-    x_val = x_val.reshape(-1, size, size)
-    x_test = x_test.reshape(-1, size, size)
-    if proj == 'V':
-        x_train = np.sum(x_train, axis=2, keepdims=True)
-        x_val = np.sum(x_val, axis=2, keepdims=True)
-        x_test = np.sum(x_test, axis=2, keepdims=True)
+# load the dasets and project the pixel V or H to obtain sequences instead of 2D images
+def load_datasetSequence2(size, proj='V'):
+    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
+    X_train = X_train.reshape(-1, size, size)
+    X_val = X_val.reshape(-1, size, size)
+    X_test = X_test.reshape(-1, size, size)
+    if (proj == 'V'):
+        X_train = np.sum(X_train, axis=2, keepdims=True)
+        X_val = np.sum(X_val, axis=2, keepdims=True)
+        X_test = np.sum(X_test, axis=2, keepdims=True)
     else:
-        x_train = np.sum(x_train, axis=1, keepdims=True)
-        x_val = np.sum(x_val, axis=1, keepdims=True)
-        x_test = np.sum(x_test, axis=1, keepdims=True)
-        x_train = x_train.reshape(-1, size, 1)
-        x_val = x_val.reshape(-1, size, 1)
-        x_test = x_test.reshape(-1, size, 1)
-    print("X shape : {}".format(x_train.shape))
-    return x_train, y_train, x_val, y_val, x_test, y_test
+        X_train = np.sum(X_train, axis=1, keepdims=True)
+        X_val = np.sum(X_val, axis=1, keepdims=True)
+        X_test = np.sum(X_test, axis=1, keepdims=True)
+        X_train = X_train.reshape(-1, size, 1)
+        X_val = X_val.reshape(-1, size, 1)
+        X_test = X_test.reshape(-1, size, 1)
+    print('X shape : {}'.format(X_train.shape))
+    return X_train, y_train, X_val, y_val, X_test, y_test
 
+
+# ############################# Batch iterator ###############################
+# This is just a simple helper function iterating over training data in
+# mini-batches of a particular size, optionally in random order. It assumes
+# data is available as numpy arrays. For big datasets, you could load numpy
+# arrays as memory-mapped files (np.load(..., mmap_mode='r')), or write your
+# own custom data iteration function. For small datasets, you can also copy
+# them to GPU at once for slightly improved performance. This would involve
+# several changes in the main program, though, and is not demonstrated here.
+# Notice that this function returns only mini-batches of size `batchsize`.
+# If the size of the data is not a multiple of `batchsize`, it will not
+# return the last (remaining) mini-batch.
 
 def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
-    """
-    # Batch iterator
-    This is just a simple helper function iterating over training data in mini-batches of a particular size,
-    optionally in random order. It assumes data is available as numpy arrays. For big datasets, you could load numpy
-    arrays as memory-mapped files (np.load(..., mmap_mode='r')), or write your own custom data iteration function.
-    For small datasets, you can also copy them to GPU at once for slightly improved performance. This would involve
-    several changes in the main program, though, and is not demonstrated here.
-    Notice that this function returns only mini-batches of size `batchsize`.
-    If the size of the data is not a multiple of `batchsize`, it will not return the last (remaining) mini-batch.
-    :param inputs:
-    :param targets:
-    :param batchsize:
-    :param shuffle:
-    :return:
-    """
     assert len(inputs) == len(targets)
     if shuffle:
         indices = np.arange(len(inputs))
@@ -249,11 +278,11 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
         yield inputs[excerpt], targets[excerpt]
 
 
-def evaluate(eval_fn, x, y):
+def evaluate(eval_fn, X, y):
     err = 0
     acc = 0
     batches = 0
-    for batch in iterate_minibatches(x, y, min(y.shape[0], 50), shuffle=False):
+    for batch in iterate_minibatches(X, y, min(y.shape[0], 50), shuffle=False):
         inputs, targets = batch
         _err, _acc = eval_fn(inputs, targets)
         err += _err
@@ -262,10 +291,10 @@ def evaluate(eval_fn, x, y):
     return err / batches, acc / batches
 
 
-def evaluate_ae(eval_fn, x):
+def evaluateAE(eval_fn, X):
     err = 0
     batches = 0
-    for batch in iterate_minibatches(x, x, 50, shuffle=False):
+    for batch in iterate_minibatches(X, X, 50, shuffle=False):
         inputs, targets = batch
         _err = eval_fn(inputs, targets)
         err += _err
@@ -273,5 +302,24 @@ def evaluate_ae(eval_fn, x):
     return err / batches
 
 
-if __name__ == "__main__":
-    load_dataset()
+def main():
+    test_base = 'task2-testSymbols2014'
+    train_base = 'task2-trainSymb2014'
+    validation_base = 'task2-validation-isolatedTest2013b'
+    load_dataset(paths={'test': [os.path.join(test_base, 'testSymbols.npz'),
+                                 os.path.join(test_base, 'img_testSymbols'),
+                                 os.path.join(test_base, 'testSymbols_2016_iso_GT.txt')],
+                        'validation': [os.path.join(validation_base, 'validationSymbols.npz'),
+                                       os.path.join(validation_base, 'img_validationSymbols'),
+                                       os.path.join(validation_base, 'validationSymbols', 'iso_GT.txt')],
+                        'train': [os.path.join(train_base, 'trainingSymbols.npz'),
+                                  os.path.join(train_base, 'img_trainingSymbols'),
+                                  os.path.join(train_base, 'trainingSymbols', 'iso_GT.txt')],
+                        'junk': [os.path.join(train_base, 'trainingJunk.npz'),
+                                 os.path.join(train_base, 'img_trainingJunk'),
+                                 os.path.join(train_base, 'trainingJunk', 'iso_GT.txt')]},
+                 display_examples=True,
+                 load_junk=True)
+
+if __name__ == '__main__':
+    main()
