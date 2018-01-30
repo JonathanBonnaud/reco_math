@@ -32,7 +32,6 @@ def generate_seg(ink, nb_strk_max=2):
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
     filename = ink.fileName.split('/')[-1].split('.')[0]
-
     hyp_id = 0
     for hypo in all_hyp_matrix:
         with open(output_folder + '/' + filename + '_hypo_' + str(hyp_id) + '.inkml', 'w') as file:

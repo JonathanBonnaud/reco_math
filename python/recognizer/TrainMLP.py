@@ -45,15 +45,14 @@ def build_mlp(input_var=None, nodes=10, size=28, label_nb=10):
 
 
 # ############################## Main program ################################
-
-symbols_dict = {i: idx for idx, i in enumerate(
-    ["junk", "!", "(", ")", "+", "-", ".", "/", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "=", "A", "B", "C",
+symbols = ["junk", "!", "(", ")", "+", "-", ".", "/", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "=", "A", "B", "C",
      "COMMA", "E", "F", "G", "H", "I", "L", "M", "N", "P", "R", "S", "T", "V", "X", "Y", "[", "\\Delta", "\\alpha",
      "\\beta", "\\cos", "\\div", "\\exists", "\\forall", "\\gamma", "\\geq", "\\gt", "\\in", "\\infty", "\\int",
      "\\lambda", "\\ldots", "\\leq", "\\lim", "\\log", "\\lt", "\\mu", "\\neq", "\\phi", "\\pi", "\\pm", "\\prime",
      "\\rightarrow", "\\sigma", "\\sin", "\\sqrt", "\\sum", "\\tan", "\\theta", "\\times", "\\{", "\\}", "]", "a", "b",
      "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y",
-     "z", "|"])}
+     "z", "|"]
+symbols_dict = {i: idx for idx, i in enumerate(symbols)}
 
 
 def char2intvec(vect):
@@ -68,24 +67,30 @@ def main():
     # Load the dataset
     print("Loading data...")
     base = 'data/DataSymbol_Iso'
+    my_base = 'LGs/'
     test_base = 'task2-testSymbols2014'
     train_base = 'task2-trainSymb2014'
     validation_base = 'task2-validation-isolatedTest2013b'
 
-    x_train, y_train, x_val, y_val, x_test, y_test = Tools.load_dataset(
+    x_train, y_train, x_val, y_val, x_test, y_test, x_my_data, ids_my_data = Tools.load_dataset(
         paths={
-            'test': [os.path.join(base, test_base, 'testSymbols.npz'),
+            'test': [os.path.join(base, test_base, 'img_testSymbols.npz'),
                      os.path.join(base, test_base, 'img_testSymbols'),
                      os.path.join(base, test_base, 'testSymbols_2016_iso_GT.txt')],
-            'validation': [os.path.join(base, validation_base, 'validationSymbols.npz'),
+            'validation': [os.path.join(base, validation_base, 'img_validationSymbols.npz'),
                            os.path.join(base, validation_base, 'img_validationSymbols'),
                            os.path.join(base, validation_base, 'validationSymbols', 'iso_GT.txt')],
-            'train': [os.path.join(base, train_base, 'trainingSymbols.npz'),
+            'train': [os.path.join(base, train_base, 'img_trainingSymbols.npz'),
                       os.path.join(base, train_base, 'img_trainingSymbols'),
                       os.path.join(base, train_base, 'trainingSymbols', 'iso_GT.txt')],
-            'junk': [os.path.join(base, train_base, 'trainingJunk.npz'),
+            'junk': [os.path.join(base, train_base, 'img_trainingJunk.npz'),
                      os.path.join(base, train_base, 'img_trainingJunk'),
-                     os.path.join(base, train_base, 'trainingJunk', 'iso_GT.txt')]},
+                     os.path.join(base, train_base, 'trainingJunk', 'iso_GT.txt')],
+            'mydata': [
+                os.path.join(my_base, 'img_segments_hypo.npz'),
+                os.path.join(my_base, 'img_segments_hypo'),
+                None
+            ]},
         display_examples=False,
         load_junk=True
     )
@@ -144,6 +149,8 @@ def main():
     # Compile a second function computing the validation loss and accuracy:
     val_fn = theano.function([input_var, target_var], [loss, test_acc])
 
+    pred_fn = theano.function([input_var], prediction)
+
     # save the results
     val_err_array = np.array([])
     train_err_array = np.array([])
@@ -153,34 +160,35 @@ def main():
     # Finally, launch the training loop.
     print("Starting training...")
     # We iterate over epochs:
-    for epoch in range(num_epochs):
-        # In each epoch, we do a full pass over the training data:
-        train_err = 0
-        train_batches = 0
-        start_time = time.time()
-        for batch in Tools.iterate_minibatches(x_train, y_train, 50, shuffle=True):
-            inputs, targets = batch
-            train_err += train_fn(inputs, targets)
-            train_batches += 1
-        train_err = train_err / train_batches
+    if not os.path.exists('modelMLP.npz'):
+        for epoch in range(num_epochs):
+            # In each epoch, we do a full pass over the training data:
+            train_err = 0
+            train_batches = 0
+            start_time = time.time()
+            for batch in Tools.iterate_minibatches(x_train, y_train, 50, shuffle=True):
+                inputs, targets = batch
+                train_err += train_fn(inputs, targets)
+                train_batches += 1
+            train_err = train_err / train_batches
 
-        # And a full pass over the validation data:
-        train_err, train_acc = Tools.evaluate(val_fn, x_train, y_train)
-        val_err, val_acc = Tools.evaluate(val_fn, x_val, y_val)
-        val_err_array = np.append(val_err_array, val_err)
-        train_err_array = np.append(train_err_array, train_err)
+            # And a full pass over the validation data:
+            train_err, train_acc = Tools.evaluate(val_fn, x_train, y_train)
+            val_err, val_acc = Tools.evaluate(val_fn, x_val, y_val)
+            val_err_array = np.append(val_err_array, val_err)
+            train_err_array = np.append(train_err_array, train_err)
 
-        # instead of saving for each epoch, save only when MSE is better
-        np.savez('modelMLP.npz', *lasagne.layers.get_all_param_values(network))
+            # instead of saving for each epoch, save only when MSE is better
+            np.savez('modelMLP.npz', *lasagne.layers.get_all_param_values(network))
 
-        # Then we print the results for this epoch:
-        print("Epoch {} of {} took {:.3f}s".format(epoch + 1, num_epochs, time.time() - start_time))
-        print("  training loss:\t\t{:.6f}".format(train_err))
-        print("  train accuracy:\t\t{:.2f} %".format(
-            train_acc * 100))
-        print("  validation loss:\t\t{:.6f}".format(val_err))
-        print("  validation accuracy:\t\t{:.2f} %".format(
-            val_acc * 100))
+            # Then we print the results for this epoch:
+            print("Epoch {} of {} took {:.3f}s".format(epoch + 1, num_epochs, time.time() - start_time))
+            print("  training loss:\t\t{:.6f}".format(train_err))
+            print("  train accuracy:\t\t{:.2f} %".format(
+                train_acc * 100))
+            print("  validation loss:\t\t{:.6f}".format(val_err))
+            print("  validation accuracy:\t\t{:.2f} %".format(
+                val_acc * 100))
 
     with np.load('modelMLP.npz') as f:
         param_values = [f['arr_%d' % i] for i in range(len(f.files))]
@@ -192,14 +200,22 @@ def main():
     print("  test loss:\t\t\t{:.6f}".format(test_err))
     print("  test accuracy:\t\t{:.2f} %".format(test_acc * 100))
 
+    ma_prediction = pred_fn(x_my_data)
+    symbols_pred = [symbols[i] for i in np.argmax(ma_prediction, axis=1)]
+    print(len(symbols_pred))
+    with open("PRED.txt", 'w') as file:
+        for id, pred in zip(ids_my_data, symbols_pred):
+            file.write("{}\t{}\n".format(id, pred))
+
     print(val_err_array)
+    """
     plt.xlabel('epoch')
     plt.ylabel('MSE val / train')
     plt.title('Digit classifier')
     plt.plot(range(num_epochs), val_err_array, 'b', range(num_epochs), train_err_array, 'r', [best_epoch],
              [best_val_mse], 'go')
     plt.savefig('resultMLP.png')
-
+    """
 
 if __name__ == '__main__':
     main()

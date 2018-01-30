@@ -82,7 +82,7 @@ def load_dataset(paths=None, display_examples=False, load_junk=False):
 
         Note: GT stand for Ground Truth
     """
-    datasets = ['train', 'validation', 'test']
+    datasets = ['train', 'validation', 'test', 'mydata']
     if load_junk:
         datasets += ['junk']
 
@@ -94,6 +94,7 @@ def load_dataset(paths=None, display_examples=False, load_junk=False):
     patt_re = re.compile('\W*(\d*).png')  # Images file name (isoX.png)
     data = {i: None for i in datasets}
     data_gt = {i: None for i in datasets}
+    data_ids = []
     for corpus in datasets:
         path = paths[corpus]
         # print('\t{}: {}'.format(corpus, path))
@@ -101,9 +102,10 @@ def load_dataset(paths=None, display_examples=False, load_junk=False):
         img_dir = path[1]
         gt_file = path[2]
 
-        if npz_file is not None and os.path.isfile(npz_file):
+        if npz_file is not None and os.path.exists(npz_file):
             # if npz file exists, we can load it
             # the npz file is created with `np.savez`
+            print("Loading file {}...".format(npz_file))
             dt = np.load(npz_file)
             data[corpus] = dt['arr_0']
             data_gt[corpus] = dt['arr_1']
@@ -117,7 +119,7 @@ def load_dataset(paths=None, display_examples=False, load_junk=False):
             data_gt[corpus] = np.ndarray(number_img, dtype='|S12')  # '|S12' stands for 12 char string
 
             # If the corpus is junk then we don't need to get the GT as it is always 'junk'
-            if corpus != 'junk':
+            if corpus != 'junk' and corpus != 'mydata':
                 # Loading GT file
                 with open(gt_file, 'r') as f:
                     gt_s = [gt.split(',')[1].strip() for gt in f.read().split('\n') if len(gt) > 0]
@@ -140,10 +142,12 @@ def load_dataset(paths=None, display_examples=False, load_junk=False):
                 data[corpus][idx, 0, :, :] = loaded_img
 
                 # Add GT for the image
-                if corpus != 'junk':
+                if corpus != 'junk' and corpus != 'mydata':
                     data_gt[corpus][idx] = gt_s[img_idx]
-                else:
+                elif corpus != 'mydata':
                     data_gt[corpus][idx] = 'junk'
+                else:
+                    data_ids.append(img)
                 print('\t\t\r  [{}] loading images {:>6}/{:}'.format(img, idx + 1, number_img), end='')
             sys.stdout.flush()
             print()  # Newline for logging purpose
@@ -164,7 +168,8 @@ def load_dataset(paths=None, display_examples=False, load_junk=False):
 
     return (data['train'], data_gt['train'],
             data['validation'], data_gt['validation'],
-            data['test'], data_gt['test'])
+            data['test'], data_gt['test'],
+            data['mydata'], data_ids)
 
 
 # ################## Download and prepare the MNIST dataset ##################
@@ -303,22 +308,29 @@ def evaluateAE(eval_fn, X):
 
 
 def main():
+    base = '../../data/DataSymbol_Iso/'
+    my_base = '../../LGs/'
     test_base = 'task2-testSymbols2014'
     train_base = 'task2-trainSymb2014'
     validation_base = 'task2-validation-isolatedTest2013b'
-    load_dataset(paths={'test': [os.path.join(test_base, 'testSymbols.npz'),
-                                 os.path.join(test_base, 'img_testSymbols'),
-                                 os.path.join(test_base, 'testSymbols_2016_iso_GT.txt')],
-                        'validation': [os.path.join(validation_base, 'validationSymbols.npz'),
-                                       os.path.join(validation_base, 'img_validationSymbols'),
-                                       os.path.join(validation_base, 'validationSymbols', 'iso_GT.txt')],
-                        'train': [os.path.join(train_base, 'trainingSymbols.npz'),
-                                  os.path.join(train_base, 'img_trainingSymbols'),
-                                  os.path.join(train_base, 'trainingSymbols', 'iso_GT.txt')],
-                        'junk': [os.path.join(train_base, 'trainingJunk.npz'),
-                                 os.path.join(train_base, 'img_trainingJunk'),
-                                 os.path.join(train_base, 'trainingJunk', 'iso_GT.txt')]},
-                 display_examples=True,
+    load_dataset(paths={'test': [os.path.join(base, test_base, 'img_testSymbols.npz'),
+                                 os.path.join(base, test_base, 'img_testSymbols'),
+                                 os.path.join(base, test_base, 'testSymbols_2016_iso_GT.txt')],
+                        'validation': [os.path.join(base, validation_base, 'img_validationSymbols.npz'),
+                                       os.path.join(base, validation_base, 'img_validationSymbols'),
+                                       os.path.join(base, validation_base, 'validationSymbols', 'iso_GT.txt')],
+                        'train': [os.path.join(base, train_base, 'img_trainingSymbols.npz'),
+                                  os.path.join(base, train_base, 'img_trainingSymbols'),
+                                  os.path.join(base, train_base, 'trainingSymbols', 'iso_GT.txt')],
+                        'junk': [os.path.join(base, train_base, 'img_trainingJunk.npz'),
+                                 os.path.join(base, train_base, 'img_trainingJunk'),
+                                 os.path.join(base, train_base, 'trainingJunk', 'iso_GT.txt')],
+                        'mydata': [
+                            os.path.join(my_base, 'img_segments_hypo.npz'),
+                            os.path.join(my_base, 'img_segments_hypo'),
+                            None
+                        ]},
+                 display_examples=False,
                  load_junk=True)
 
 if __name__ == '__main__':
