@@ -4,7 +4,7 @@ import os
 from python.gitchrome.crohmelib.bin.inkml import *
 
 
-def generate_seg(ink, nb_strk_max=4):
+def generate_seg(ink, nb_strk_max=2):
     nb_strokes = len(ink.strokes)
     print("Nb strokes: ", nb_strokes)
     strokes_list = ink.strokes
