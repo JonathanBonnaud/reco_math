@@ -5,7 +5,7 @@ Author/Contact: Harold Mouchère (harold.mouchere@univ-nantes.fr)
 
 This is a Master Project to apply machine (deep) learning tool on a challenging computer vision problem: recognition of handwritten Math Expression.
 
-The subject is available in the directory `subject/` and the provided code in `code/`. Some toy examples are available in the `data/` directory but the complete dataset is available in the TC11 repository.
+The subject is available in the directory `subject/` and the provided code in `python/`. Some toy examples are available in the `data/` directory but the complete dataset is available in the TC11 repository.
 
 
 ## Usage of some provided tools
