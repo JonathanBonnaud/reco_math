@@ -1,4 +1,4 @@
-Math Project
+Math Reco Project
 ========
 
 Author/Contact: Harold Mouchère (harold.mouchere@univ-nantes.fr)
